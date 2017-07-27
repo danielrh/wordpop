@@ -31,6 +31,22 @@ struct Word14(pub [u8;14]);
 struct Word15(pub [u8;15]);
 #[derive(Clone,Copy,PartialEq,Eq)]
 struct Word16(pub [u8;16]);
+#[derive(Clone,Copy,PartialEq,Eq)]
+struct Word17(pub [u8;17]);
+#[derive(Clone,Copy,PartialEq,Eq)]
+struct Word18(pub [u8;18]);
+#[derive(Clone,Copy,PartialEq,Eq)]
+struct Word19(pub [u8;19]);
+#[derive(Clone,Copy,PartialEq,Eq)]
+struct Word20(pub [u8;20]);
+#[derive(Clone,Copy,PartialEq,Eq)]
+struct Word21(pub [u8;21]);
+#[derive(Clone,Copy,PartialEq,Eq)]
+struct Word22(pub [u8;22]);
+#[derive(Clone,Copy,PartialEq,Eq)]
+struct Word23(pub [u8;23]);
+#[derive(Clone,Copy,PartialEq,Eq)]
+struct Word24(pub [u8;24]);
 
 trait Sliceable {
     fn slice<'a>(&'a self) -> &'a [u8];
@@ -78,6 +94,14 @@ SlicableTrait!(Word13,13);
 SlicableTrait!(Word14,14);
 SlicableTrait!(Word15,15);
 SlicableTrait!(Word16,16);
+SlicableTrait!(Word17,17);
+SlicableTrait!(Word18,18);
+SlicableTrait!(Word19,19);
+SlicableTrait!(Word20,20);
+SlicableTrait!(Word21,21);
+SlicableTrait!(Word22,22);
+SlicableTrait!(Word23,23);
+SlicableTrait!(Word24,24);
 
 #[derive(Copy,Clone,PartialEq,Eq)]
 struct Entry<Word:Sliceable+Ord+Clone+Copy> {
@@ -262,7 +286,7 @@ impl<Word:Sliceable+Ord+Default+Copy> LRU<Word> {
     }
 }
 
-struct FullLRU((),(),(),(),LRU<Word4>,LRU<Word5>,LRU<Word6>,LRU<Word7>,LRU<Word8>,LRU<Word9>,LRU<Word10>,LRU<Word11>,LRU<Word12>,LRU<Word13>,LRU<Word14>,LRU<Word15>,LRU<Word16>, ());
+struct FullLRU((),(),(),(),LRU<Word4>,LRU<Word5>,LRU<Word6>,LRU<Word7>,LRU<Word8>,LRU<Word9>,LRU<Word10>,LRU<Word11>,LRU<Word12>,LRU<Word13>,LRU<Word14>,LRU<Word15>,LRU<Word16>,LRU<Word17>,LRU<Word18>,LRU<Word19>,LRU<Word20>,LRU<Word21>,LRU<Word22>,LRU<Word23>,LRU<Word24>, ());
 impl Default for FullLRU {
     fn default() -> Self {
         FullLRU((),(),(),(),
@@ -271,14 +295,22 @@ impl Default for FullLRU {
                 LRU::<Word6>::new(64 * 1024 * 1024),
                 LRU::<Word7>::new(64 * 1024 * 1024),
                 LRU::<Word8>::new(64 * 1024 * 1024),
-                LRU::<Word9>::new(32 * 1024 * 1024),
-                LRU::<Word10>::new(32 * 1024 * 1024),
+                LRU::<Word9>::new(64 * 1024 * 1024),
+                LRU::<Word10>::new(64 * 1024 * 1024),
                 LRU::<Word11>::new(32 * 1024 * 1024),
                 LRU::<Word12>::new(32 * 1024 * 1024),
-                LRU::<Word13>::new(16 * 1024 * 1024),
-                LRU::<Word14>::new(16 * 1024 * 1024),
+                LRU::<Word13>::new(32 * 1024 * 1024),
+                LRU::<Word14>::new(32 * 1024 * 1024),
                 LRU::<Word15>::new(16 * 1024 * 1024),
                 LRU::<Word16>::new(16 * 1024 * 1024),
+                LRU::<Word17>::new(16 * 1024 * 1024),
+                LRU::<Word18>::new(16 * 1024 * 1024),
+                LRU::<Word19>::new(8 * 1024 * 1024),
+                LRU::<Word20>::new(8 * 1024 * 1024),
+                LRU::<Word21>::new(8 * 1024 * 1024),
+                LRU::<Word22>::new(8 * 1024 * 1024),
+                LRU::<Word23>::new(8 * 1024 * 1024),
+                LRU::<Word24>::new(8 * 1024 * 1024),
                 ())
     }
 }
@@ -298,7 +330,15 @@ impl FullLRU {
         try!(self.14.print(w));
         try!(self.15.print(w));
         try!(self.16.print(w));
-        eof(&self.17);
+        try!(self.17.print(w));
+        try!(self.18.print(w));
+        try!(self.19.print(w));
+        try!(self.20.print(w));
+        try!(self.21.print(w));
+        try!(self.22.print(w));
+        try!(self.23.print(w));
+        try!(self.24.print(w));
+        eof(&self.25);
         Ok(())
     }
 }
@@ -308,8 +348,8 @@ fn evaluate_biggest<Word:Sliceable+Default+Copy+Ord>(_:&() ,_lru: &LRU<Word>, _:
 fn eof(_:&()){}
 fn add_block(block_id: u8, block:&[u8;4096 * 1024], size:usize, lru:&mut FullLRU, rle_max: usize) {
     assert!(size <= 4096 * 1024);
-    let max_len = evaluate_biggest(&lru.3, &lru.16, &lru.17);
-    assert_eq!(max_len, 16);//known a priori...but the above checks it since EOF comes after lru.16
+    let max_len = evaluate_biggest(&lru.3, &lru.24, &lru.25);
+    assert_eq!(max_len, 24);//known a priori...but the above checks it since EOF comes after lru.24
     if size < max_len {
         return;
     }
@@ -340,7 +380,15 @@ fn add_block(block_id: u8, block:&[u8;4096 * 1024], size:usize, lru:&mut FullLRU
         lru.14.add(block_id, &block, index);
         lru.15.add(block_id, &block, index);
         lru.16.add(block_id, &block, index);
-        eof(&lru.17);
+        lru.17.add(block_id, &block, index);
+        lru.18.add(block_id, &block, index);
+        lru.19.add(block_id, &block, index);
+        lru.20.add(block_id, &block, index);
+        lru.21.add(block_id, &block, index);
+        lru.22.add(block_id, &block, index);
+        lru.23.add(block_id, &block, index);
+        lru.24.add(block_id, &block, index);
+        eof(&lru.25);
     }
 }
 
