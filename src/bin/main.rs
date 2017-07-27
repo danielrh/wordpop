@@ -400,34 +400,32 @@ impl<Word:Sliceable+Ord+Default+Copy> LRU<Word> {
 }
 
 struct FullLRU((),(),(),(),LRU<Word4>,LRU<Word5>,LRU<Word6>,LRU<Word7>,LRU<Word8>,LRU<Word9>,LRU<Word10>,LRU<Word11>,LRU<Word12>,LRU<Word13>,LRU<Word14>,LRU<Word15>,LRU<Word16>,LRU<Word17>,LRU<Word18>,LRU<Word19>,LRU<Word20>,LRU<Word21>,LRU<Word22>,LRU<Word23>,LRU<Word24>, ());
-impl Default for FullLRU {
-    fn default() -> Self {
+impl FullLRU {
+    fn new(scale:usize) -> Self {
         FullLRU((),(),(),(),
-                LRU::<Word4>::new(64 * 1024 * 1024),
-                LRU::<Word5>::new(64 * 1024 * 1024),
-                LRU::<Word6>::new(64 * 1024 * 1024),
-                LRU::<Word7>::new(64 * 1024 * 1024),
-                LRU::<Word8>::new(64 * 1024 * 1024),
-                LRU::<Word9>::new(64 * 1024 * 1024),
-                LRU::<Word10>::new(64 * 1024 * 1024),
-                LRU::<Word11>::new(32 * 1024 * 1024),
-                LRU::<Word12>::new(32 * 1024 * 1024),
-                LRU::<Word13>::new(32 * 1024 * 1024),
-                LRU::<Word14>::new(32 * 1024 * 1024),
-                LRU::<Word15>::new(16 * 1024 * 1024),
-                LRU::<Word16>::new(16 * 1024 * 1024),
-                LRU::<Word17>::new(16 * 1024 * 1024),
-                LRU::<Word18>::new(16 * 1024 * 1024),
-                LRU::<Word19>::new(8 * 1024 * 1024),
-                LRU::<Word20>::new(8 * 1024 * 1024),
-                LRU::<Word21>::new(8 * 1024 * 1024),
-                LRU::<Word22>::new(8 * 1024 * 1024),
-                LRU::<Word23>::new(8 * 1024 * 1024),
-                LRU::<Word24>::new(8 * 1024 * 1024),
+                LRU::<Word4>::new(64 * scale),
+                LRU::<Word5>::new(64 * scale),
+                LRU::<Word6>::new(64 * scale),
+                LRU::<Word7>::new(64 * scale),
+                LRU::<Word8>::new(64 * scale),
+                LRU::<Word9>::new(64 * scale),
+                LRU::<Word10>::new(64 * scale),
+                LRU::<Word11>::new(32 * scale),
+                LRU::<Word12>::new(32 * scale),
+                LRU::<Word13>::new(32 * scale),
+                LRU::<Word14>::new(32 * scale),
+                LRU::<Word15>::new(16 * scale),
+                LRU::<Word16>::new(16 * scale),
+                LRU::<Word17>::new(16 * scale),
+                LRU::<Word18>::new(16 * scale),
+                LRU::<Word19>::new(8 * scale),
+                LRU::<Word20>::new(8 * scale),
+                LRU::<Word21>::new(8 * scale),
+                LRU::<Word22>::new(8 * scale),
+                LRU::<Word23>::new(8 * scale),
+                LRU::<Word24>::new(8 * scale),
                 ())
     }
-}
-impl FullLRU {
     pub fn print<W:Write>(&mut self, w: &mut W) -> io::Result<()>{
         eof(&self.3);
         try!(self.4.print(w));
@@ -532,11 +530,14 @@ fn read_all<R:Read>(mut reader: R,
 fn main() {
     let _ = writeln!(std::io::stderr(), "Initialization");
     let mut block = [0u8;4096 * 1024];
-    let mut lru = FullLRU::default();
     let mut block_id = 0;
     let mut rle_max = 4;
     let mut num_candidates = 16;
+    let mut scale = 1024usize * 1024usize;
     for argument in env::args().skip(1) {
+        if argument.starts_with("-s") {
+            scale = argument.trim_matches('-').trim_matches('s').parse::<i64>().unwrap() as usize;
+        }
         if argument.starts_with("-c") {
             num_candidates = argument.trim_matches('-').trim_matches('c').parse::<i64>().unwrap() as usize;
         }
@@ -544,8 +545,12 @@ fn main() {
             rle_max = argument.trim_matches('-').trim_matches('r').parse::<i64>().unwrap() as usize;
         }
     }
+    let mut lru = FullLRU::new(scale);
     for argument in env::args().skip(1) {
         if argument.starts_with("-c") {
+            continue;
+        }
+        if argument.starts_with("-s") {
             continue;
         }
         if argument.starts_with("-r") {
