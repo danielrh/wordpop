@@ -202,16 +202,15 @@ const NTH:[u8;16] = ['0' as u8,'1' as u8,'2' as u8,'3' as u8,'4' as u8,'5' as u8
 fn nibble_to_hex(nib:u8) -> u8 {
     NTH[nib as usize]
 }
-#[cfg(not(feature="ascii"))]
-fn print_encode<Word:Sliceable>(buf:&mut [u8;512], word:&Word) -> usize {
+fn print_encode_hex<Word:Sliceable>(buf:&mut [u8;512], word:&Word) -> usize {
     for (index, item) in word.slice().iter().enumerate() {
         buf[index<<1] = nibble_to_hex(*item>>4);
         buf[(index<<1) + 1] = nibble_to_hex(*item&0xf);
     }
     word.slice().len()<<1
 }
-#[cfg(feature="ascii")]
-fn print_encode<Word:Sliceable>(buf:&mut [u8;512], word:&Word) -> usize {
+
+fn print_encode_ascii<Word:Sliceable>(buf:&mut [u8;512], word:&Word) -> usize {
     buf[..word.slice().len()].clone_from_slice(word.slice());
     word.slice().len()
 }
@@ -295,7 +294,7 @@ impl<Word:Sliceable+Ord+Default+Copy> LRU<Word> {
             rand_state:init_silly_rand(),
         }
     }
-    fn print<W:Write>(&mut self, w:&mut W) -> io::Result<()>{
+    fn print<W:Write>(&mut self, w:&mut W, ascii: bool) -> io::Result<()>{
         self.evict(true, 0);
         let mut buf = [0u8;512];
         for entry in self.lru.iter() {
@@ -303,7 +302,7 @@ impl<Word:Sliceable+Ord+Default+Copy> LRU<Word> {
             if count <= 1 {
                 continue;
             }
-            let mut cur_index = print_encode(&mut buf, &entry.word);
+            let mut cur_index = if ascii {print_encode_ascii(&mut buf, &entry.word)} else {print_encode_hex(&mut buf, &entry.word)};
             buf[cur_index] = ' ' as u8;
             cur_index += 1;
             let mut digit = 1000000000;
@@ -426,29 +425,29 @@ impl FullLRU {
                 LRU::<Word24>::new(8 * scale),
                 ())
     }
-    pub fn print<W:Write>(&mut self, w: &mut W) -> io::Result<()>{
+    pub fn print<W:Write>(&mut self, w: &mut W, ascii: bool) -> io::Result<()>{
         eof(&self.3);
-        try!(self.4.print(w));
-        try!(self.5.print(w));
-        try!(self.6.print(w));
-        try!(self.7.print(w));
-        try!(self.8.print(w));
-        try!(self.9.print(w));
-        try!(self.10.print(w));
-        try!(self.11.print(w));
-        try!(self.12.print(w));
-        try!(self.13.print(w));
-        try!(self.14.print(w));
-        try!(self.15.print(w));
-        try!(self.16.print(w));
-        try!(self.17.print(w));
-        try!(self.18.print(w));
-        try!(self.19.print(w));
-        try!(self.20.print(w));
-        try!(self.21.print(w));
-        try!(self.22.print(w));
-        try!(self.23.print(w));
-        try!(self.24.print(w));
+        try!(self.4.print(w, ascii));
+        try!(self.5.print(w, ascii));
+        try!(self.6.print(w, ascii));
+        try!(self.7.print(w, ascii));
+        try!(self.8.print(w, ascii));
+        try!(self.9.print(w, ascii));
+        try!(self.10.print(w, ascii));
+        try!(self.11.print(w, ascii));
+        try!(self.12.print(w, ascii));
+        try!(self.13.print(w, ascii));
+        try!(self.14.print(w, ascii));
+        try!(self.15.print(w, ascii));
+        try!(self.16.print(w, ascii));
+        try!(self.17.print(w, ascii));
+        try!(self.18.print(w, ascii));
+        try!(self.19.print(w, ascii));
+        try!(self.20.print(w, ascii));
+        try!(self.21.print(w, ascii));
+        try!(self.22.print(w, ascii));
+        try!(self.23.print(w, ascii));
+        try!(self.24.print(w, ascii));
         eof(&self.25);
         Ok(())
     }
@@ -534,7 +533,11 @@ fn main() {
     let mut rle_max = 4;
     let mut num_candidates = 16;
     let mut scale = 1024usize * 1024usize;
+    let mut ascii = false;
     for argument in env::args().skip(1) {
+        if argument == "-ascii" {
+            ascii = true;
+        }
         if argument.starts_with("-s") {
             scale = argument.trim_matches('-').trim_matches('s').parse::<i64>().unwrap() as usize;
         }
@@ -547,6 +550,9 @@ fn main() {
     }
     let mut lru = FullLRU::new(scale);
     for argument in env::args().skip(1) {
+        if argument == "-ascii" {
+            continue;
+        }
         if argument.starts_with("-c") {
             continue;
         }
@@ -570,7 +576,7 @@ fn main() {
     {
         {
             let stdio = io::stdout();
-            lru.print(&mut BufWriter::new(stdio.lock())).unwrap();
+            lru.print(&mut BufWriter::new(stdio.lock()), ascii).unwrap();
         }
         let _ = io::stdout().flush();
     }
