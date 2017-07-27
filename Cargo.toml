@@ -1,5 +1,5 @@
 [package]
-name = "dictionary"
+name = "wordpop"
 version = "0.0.1"
 authors = [
     "Daniel Reiter Horn <danielrh@dropbox.com>",
@@ -13,7 +13,7 @@ readme = "README.md"
 
 [[bin]]
 doc = false
-name = "dictionary"
+name = "wordpop"
 
 [profile.release]
 lto=true
