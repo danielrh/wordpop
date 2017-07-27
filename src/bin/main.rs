@@ -7,47 +7,47 @@ use std::env;
 use std::cmp;
 
 
-#[derive(Clone,Copy,PartialEq,Eq)]
+#[derive(Clone,Copy,PartialEq,Eq,Debug)]
 struct Word4(pub [u8;4]);
-#[derive(Clone,Copy,PartialEq,Eq)]
+#[derive(Clone,Copy,PartialEq,Eq,Debug)]
 struct Word5(pub [u8;5]);
-#[derive(Clone,Copy,PartialEq,Eq)]
+#[derive(Clone,Copy,PartialEq,Eq,Debug)]
 struct Word6(pub [u8;6]);
-#[derive(Clone,Copy,PartialEq,Eq)]
+#[derive(Clone,Copy,PartialEq,Eq,Debug)]
 struct Word7(pub [u8;7]);
-#[derive(Clone,Copy,PartialEq,Eq)]
+#[derive(Clone,Copy,PartialEq,Eq,Debug)]
 struct Word8(pub [u8;8]);
-#[derive(Clone,Copy,PartialEq,Eq)]
+#[derive(Clone,Copy,PartialEq,Eq,Debug)]
 struct Word9(pub [u8;9]);
-#[derive(Clone,Copy,PartialEq,Eq)]
+#[derive(Clone,Copy,PartialEq,Eq,Debug)]
 struct Word10(pub [u8;10]);
-#[derive(Clone,Copy,PartialEq,Eq)]
+#[derive(Clone,Copy,PartialEq,Eq,Debug)]
 struct Word11(pub [u8;11]);
-#[derive(Clone,Copy,PartialEq,Eq)]
+#[derive(Clone,Copy,PartialEq,Eq,Debug)]
 struct Word12(pub [u8;12]);
-#[derive(Clone,Copy,PartialEq,Eq)]
+#[derive(Clone,Copy,PartialEq,Eq,Debug)]
 struct Word13(pub [u8;13]);
-#[derive(Clone,Copy,PartialEq,Eq)]
+#[derive(Clone,Copy,PartialEq,Eq,Debug)]
 struct Word14(pub [u8;14]);
-#[derive(Clone,Copy,PartialEq,Eq)]
+#[derive(Clone,Copy,PartialEq,Eq,Debug)]
 struct Word15(pub [u8;15]);
-#[derive(Clone,Copy,PartialEq,Eq)]
+#[derive(Clone,Copy,PartialEq,Eq,Debug)]
 struct Word16(pub [u8;16]);
-#[derive(Clone,Copy,PartialEq,Eq)]
+#[derive(Clone,Copy,PartialEq,Eq,Debug)]
 struct Word17(pub [u8;17]);
-#[derive(Clone,Copy,PartialEq,Eq)]
+#[derive(Clone,Copy,PartialEq,Eq,Debug)]
 struct Word18(pub [u8;18]);
-#[derive(Clone,Copy,PartialEq,Eq)]
+#[derive(Clone,Copy,PartialEq,Eq,Debug)]
 struct Word19(pub [u8;19]);
-#[derive(Clone,Copy,PartialEq,Eq)]
+#[derive(Clone,Copy,PartialEq,Eq,Debug)]
 struct Word20(pub [u8;20]);
-#[derive(Clone,Copy,PartialEq,Eq)]
+#[derive(Clone,Copy,PartialEq,Eq,Debug)]
 struct Word21(pub [u8;21]);
-#[derive(Clone,Copy,PartialEq,Eq)]
+#[derive(Clone,Copy,PartialEq,Eq,Debug)]
 struct Word22(pub [u8;22]);
-#[derive(Clone,Copy,PartialEq,Eq)]
+#[derive(Clone,Copy,PartialEq,Eq,Debug)]
 struct Word23(pub [u8;23]);
-#[derive(Clone,Copy,PartialEq,Eq)]
+#[derive(Clone,Copy,PartialEq,Eq,Debug)]
 struct Word24(pub [u8;24]);
 
 trait Sliceable {
@@ -105,7 +105,7 @@ SlicableTrait!(Word22,22);
 SlicableTrait!(Word23,23);
 SlicableTrait!(Word24,24);
 
-#[derive(Copy,Clone,PartialEq,Eq)]
+#[derive(Copy,Clone,PartialEq,Eq,Debug)]
 struct Entry<Word:Sliceable+Ord+Clone+Copy> {
     internal_count: i32,
     word: Word,
@@ -141,12 +141,25 @@ impl<Word:Sliceable+Ord+Clone+Copy> Entry<Word> {
 }
 impl<Word:Sliceable+Ord+Copy> PartialOrd for Entry<Word> {
     fn partial_cmp(&self, other:&Self) -> Option<cmp::Ordering> {
-        self.word.partial_cmp(&other.word)
+        match self.word.partial_cmp(&other.word) {
+            Some(val) =>  {
+                match val {
+                    cmp::Ordering::Less => Some(cmp::Ordering::Less),
+                    cmp::Ordering::Greater => Some(cmp::Ordering::Greater),
+                    cmp::Ordering::Equal => self.block_id.partial_cmp(&other.block_id),
+                }
+            }
+            None => None
+        }
     }
 }
 impl<Word:Sliceable+Ord+Copy> Ord for Entry<Word> {
     fn cmp(&self, other:&Self) -> cmp::Ordering {
-        self.word.cmp(&other.word)
+        match self.word.cmp(&other.word) {
+            cmp::Ordering::Less => cmp::Ordering::Less,
+            cmp::Ordering::Greater => cmp::Ordering::Greater,
+            cmp::Ordering::Equal => self.block_id.cmp(&other.block_id),
+        }
     }
 }
 
@@ -215,6 +228,63 @@ fn starts_with_constant<Word:Sliceable>(w:&Word) -> bool {
     let s = w.slice();
     s[0] == s[1] && s[1] == s[2] && s[2] == s[3]
 }
+#[cfg(test)]
+mod test {
+    use super::LRU;
+    use super::Word4;
+    use super::Entry;
+    use super::Sliceable;
+    #[test]
+    fn test_eliminate_duplicates() {
+        let mut dups = LRU::<super::Word4>::new(32);
+        let mapping:[u8;32] = [
+            1,1,1,1,
+            2,3,3,3,
+            3,3,3,4,
+            5,5,6,6,
+
+            7,7,7,7,
+            8,8,9,9,
+            10,10,10,11,
+            11,12,13,14
+        ];
+        let block_ids:[u8;32]  = [
+            0,0,1,1,
+            1,2,3,4,
+            5,6,7,8,
+            9,10,11,12,
+            
+            13,13,13,13,
+            14,15,16,17,
+            18,19,20,21,
+            22,23,24,25
+            ];
+        for (index, entry) in dups.cur.iter_mut().enumerate() {
+            entry.word.slice_mut()[0] = mapping[index];
+            entry.block_id = block_ids[index];
+            entry.internal_count = -2;
+        }
+        dups.cur_index = 32;
+        dups.eliminate_duplicates();
+        assert_eq!(&dups.cur[..14],
+                   &[Entry::<Word4>{internal_count:-4,word:Word4([1,0,0,0]), block_id:1},
+                   Entry::<Word4>{internal_count:-2,word:Word4([2,0,0,0]), block_id:1},
+                   Entry::<Word4>{internal_count:-12,word:Word4([3,0,0,0]), block_id:7},
+                   Entry::<Word4>{internal_count:-2,word:Word4([4,0,0,0]), block_id:8},
+                   Entry::<Word4>{internal_count:-4,word:Word4([5,0,0,0]), block_id:10},
+                   Entry::<Word4>{internal_count:-4,word:Word4([6,0,0,0]), block_id:12},
+                   Entry::<Word4>{internal_count:-2,word:Word4([7,0,0,0]), block_id:13},
+                   Entry::<Word4>{internal_count:-4,word:Word4([8,0,0,0]), block_id:15},
+                   Entry::<Word4>{internal_count:-4,word:Word4([9,0,0,0]), block_id:17},
+                   Entry::<Word4>{internal_count:-6,word:Word4([10,0,0,0]), block_id:20},
+                   Entry::<Word4>{internal_count:-4,word:Word4([11,0,0,0]), block_id:22},
+                   Entry::<Word4>{internal_count:-2,word:Word4([12,0,0,0]), block_id:23},
+                   Entry::<Word4>{internal_count:-2,word:Word4([13,0,0,0]), block_id:24},
+                   Entry::<Word4>{internal_count:-2,word:Word4([14,0,0,0]), block_id:25}][..]);
+        assert_eq!(dups.cur_index,
+                   14);
+    }
+}
 
 impl<Word:Sliceable+Ord+Default+Copy> LRU<Word> {
     fn new(num_entries: usize) -> Self {
@@ -259,6 +329,7 @@ impl<Word:Sliceable+Ord+Default+Copy> LRU<Word> {
             if self.cur[validated_index].word == self.cur[index].word {
                 if self.cur[validated_index].block_id != self.cur[index].block_id {
                     let del = self.cur[index].count();
+                    self.cur[validated_index].block_id = self.cur[index].block_id;
                     self.cur[validated_index].increment(del);
                 }
             } else {
