@@ -17,3 +17,6 @@ name = "dictionary"
 
 [profile.release]
 lto=true
+
+[features]
+ascii=[]

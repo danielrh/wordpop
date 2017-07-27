@@ -127,12 +127,42 @@ struct LRU<Word:Sliceable+Ord+Copy> {
     rand_state: u64,
 }
 
+#[cfg(not(feature="ascii"))]
 const NTH:[u8;16] = ['0' as u8,'1' as u8,'2' as u8,'3' as u8,'4' as u8,'5' as u8,
              '6' as u8,'7' as u8,'8' as u8,'9' as u8,'a' as u8,'b' as u8,
              'c' as u8,'d' as u8,'e' as u8,'f' as u8];
+
+#[cfg(not(feature="ascii"))]
 fn nibble_to_hex(nib:u8) -> u8 {
     NTH[nib as usize]
 }
+#[cfg(not(feature="ascii"))]
+fn print_encode<Word:Sliceable>(buf:&mut [u8;512], word:&Word) -> usize {
+    for (index, item) in word.slice().iter().enumerate() {
+        buf[index<<1] = nibble_to_hex(*item>>4);
+        buf[(index<<1) + 1] = nibble_to_hex(*item&0xf);
+    }
+    word.slice().len()<<1
+}
+#[cfg(feature="ascii")]
+fn print_encode<Word:Sliceable>(buf:&mut [u8;512], word:&Word) -> usize {
+    buf[..word.slice().len()].clone_from_slice(word.slice());
+    word.slice().len()
+}
+
+fn ends_with_constant<Word:Sliceable>(w:&Word) -> bool {
+    let s = w.slice();
+    let len = s.len();
+    s[len - 1] == s[len - 2] &&
+        s[len - 2] == s[len - 3] && 
+        s[len - 3] == s[len - 4]
+}
+
+fn starts_with_constant<Word:Sliceable>(w:&Word) -> bool {
+    let s = w.slice();
+    s[0] == s[1] && s[1] == s[2] && s[2] == s[3]
+}
+
 impl<Word:Sliceable+Ord+Default+Copy> LRU<Word> {
     fn new(num_entries: usize) -> Self {
         LRU::<Word>{
@@ -149,13 +179,7 @@ impl<Word:Sliceable+Ord+Default+Copy> LRU<Word> {
             if entry.count == 0 {
                 continue;
             }
-            for (index, item) in entry.word.slice().iter().enumerate() {
-                buf[index<<1] = nibble_to_hex(*item>>4);
-                buf[(index<<1) + 1] = nibble_to_hex(*item&0xf);
-            }
-            let mut cur_index = Word::default().slice().len()<<1;
-            //buf[..Word::default().slice().len()].clone_from_slice(entry.word.slice());
-            //let mut cur_index = Word::default().slice().len();
+            let mut cur_index = print_encode(&mut buf, &entry.word);
             buf[cur_index] = ' ' as u8;
             cur_index += 1;
             let count = entry.count;
@@ -224,6 +248,9 @@ impl<Word:Sliceable+Ord+Default+Copy> LRU<Word> {
             let mut dst = &mut self.cur[self.cur_index];
             let len = dst.word.slice().len();
             dst.word.slice_mut().clone_from_slice(&block[index..(index + len)]);
+            if ends_with_constant(&dst.word) ||starts_with_constant(&dst.word) {
+                return; // lets not bother using this
+            }
             dst.count = 1;
             dst.block_id = block_id;
             self.cur_index += 1;
@@ -279,14 +306,27 @@ fn evaluate_biggest<Word:Sliceable+Default+Copy+Ord>(_:&() ,_lru: &LRU<Word>, _:
     Word::default().slice().len()
 }
 fn eof(_:&()){}
-fn add_block(block_id: u8, block:&[u8;4096 * 1024], size:usize, lru:&mut FullLRU) {
+fn add_block(block_id: u8, block:&[u8;4096 * 1024], size:usize, lru:&mut FullLRU, rle_max: usize) {
     assert!(size <= 4096 * 1024);
     let max_len = evaluate_biggest(&lru.3, &lru.16, &lru.17);
     assert_eq!(max_len, 16);//known a priori...but the above checks it since EOF comes after lru.16
     if size < max_len {
         return;
     }
+    let mut rle = 8;
+    let mut rle_char = 0u8;
     for index in 0..(size - max_len) {
+        let val = block[index];
+        if val == rle_char {
+            rle += 1;
+            if rle > rle_max {
+                continue;
+            }
+        } else {
+            rle = 0;
+        }
+        rle_char = val;
+
         lru.4.add(block_id, &block, index);
         lru.5.add(block_id, &block, index);
         lru.6.add(block_id, &block, index);
@@ -335,7 +375,7 @@ fn main() {
     for argument in env::args().skip(1) {
         let file = File::open(argument).unwrap();
         match read_all(&file, &mut block[..]) {
-            Ok(size) => add_block(block_id, &block, size, &mut lru),
+            Ok(size) => add_block(block_id, &block, size, &mut lru, 4),
             Err(err) => panic!(err),
         }
         block_id += 1;
