@@ -18,5 +18,8 @@ name = "wordpop"
 [profile.release]
 lto=true
 
+[dependencies]
+rand = "0.3"
+
 [features]
 ascii=[]
