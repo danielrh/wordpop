@@ -266,19 +266,19 @@ struct FullLRU((),(),(),(),LRU<Word4>,LRU<Word5>,LRU<Word6>,LRU<Word7>,LRU<Word8
 impl Default for FullLRU {
     fn default() -> Self {
         FullLRU((),(),(),(),
-                LRU::<Word4>::new(16 * 1024 * 1024),
-                LRU::<Word5>::new(16 * 1024 * 1024),
-                LRU::<Word6>::new(16 * 1024 * 1024),
-                LRU::<Word7>::new(16 * 1024 * 1024),
-                LRU::<Word8>::new(16 * 1024 * 1024),
-                LRU::<Word9>::new(8 * 1024 * 1024),
-                LRU::<Word10>::new(8 * 1024 * 1024),
-                LRU::<Word11>::new(8 * 1024 * 1024),
-                LRU::<Word12>::new(8 * 1024 * 1024),
-                LRU::<Word13>::new(4 * 1024 * 1024),
-                LRU::<Word14>::new(4 * 1024 * 1024),
-                LRU::<Word15>::new(4 * 1024 * 1024),
-                LRU::<Word16>::new(4 * 1024 * 1024),
+                LRU::<Word4>::new(64 * 1024 * 1024),
+                LRU::<Word5>::new(64 * 1024 * 1024),
+                LRU::<Word6>::new(64 * 1024 * 1024),
+                LRU::<Word7>::new(64 * 1024 * 1024),
+                LRU::<Word8>::new(64 * 1024 * 1024),
+                LRU::<Word9>::new(32 * 1024 * 1024),
+                LRU::<Word10>::new(32 * 1024 * 1024),
+                LRU::<Word11>::new(32 * 1024 * 1024),
+                LRU::<Word12>::new(32 * 1024 * 1024),
+                LRU::<Word13>::new(16 * 1024 * 1024),
+                LRU::<Word14>::new(16 * 1024 * 1024),
+                LRU::<Word15>::new(16 * 1024 * 1024),
+                LRU::<Word16>::new(16 * 1024 * 1024),
                 ())
     }
 }
@@ -369,19 +369,27 @@ fn read_all<R:Read>(mut reader: R,
 }
 
 fn main() {
+    let _ = writeln!(std::io::stderr(), "Initialization");
     let mut block = [0u8;4096 * 1024];
     let mut lru = FullLRU::default();
     let mut block_id = 0;
     for argument in env::args().skip(1) {
+        let _ = writeln!(std::io::stderr(), "Processing {}", argument);
         let file = File::open(argument).unwrap();
+        let _ = std::io::stderr().flush();
         match read_all(&file, &mut block[..]) {
             Ok(size) => add_block(block_id, &block, size, &mut lru, 4),
             Err(err) => panic!(err),
         }
         block_id += 1;
     }
+    let _ = writeln!(std::io::stderr(), "Finished");
+    let _ = std::io::stderr().flush();
     {
-        let stdio = io::stdout();
-        lru.print(&mut BufWriter::new(stdio.lock())).unwrap();
+        {
+            let stdio = io::stdout();
+            lru.print(&mut BufWriter::new(stdio.lock())).unwrap();
+        }
+        let _ = io::stdout().flush();
     }
 }
